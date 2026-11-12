@@ -1,12 +1,12 @@
 import type { Slot } from '../types'
-import { providers } from '../mock/data'
+import { providerFor } from '../lib/provider'
 import { isAvailable, isPast, longDate, time } from '../lib/format'
 import { Icon } from './Icon'
 
 export function SlotCard({ slot, selected, onSelect }: {
   slot: Slot; selected: boolean; onSelect: (slot: Slot) => void
 }) {
-  const provider = providers.find((person) => person.id === slot.providerId)!
+  const provider = providerFor(slot)
   const available = isAvailable(slot)
   const status = isPast(slot) ? 'Past' : slot.status === 'booked' ? 'Booked' : 'Available'
   return <button type="button" id={slot.id} className={`slot-card flex min-h-[108px] min-w-0 flex-col rounded-[10px] border border-[#dce4d7] bg-white px-3 py-3.5 text-left md:min-h-[101px] md:px-[15px] md:py-[13px] md:max-rail:px-2.5 md:max-rail:py-3 wide:min-h-[105px] wide:px-[11px] wide:py-3.5 roomy:min-h-28 roomy:px-3.5 roomy:py-4 enabled:hover:border-[#8fa887] enabled:hover:bg-[#f4f7f0] enabled:hover:shadow-[0_2px_6px_#2b4c3310] disabled:border-[#e7ebe1] disabled:bg-[#f6f7f3] disabled:[&_.slot-time]:text-[#727c68] disabled:[&_.slot-provider]:text-[#69765f] disabled:[&_.slot-status]:text-[#69765f] aria-pressed:border-accent aria-pressed:bg-[#eaf3eb] aria-pressed:ring-1 aria-pressed:ring-accent aria-pressed:[&_.slot-time]:text-accent aria-pressed:[&_.slot-status]:text-accent ${selected ? 'is-selected' : ''}`}

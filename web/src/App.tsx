@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Booking, Patient, Slot, ToastMessage } from './types'
-import { initialBookings, initialSlots, providers } from './mock/data'
-import { formatDate, isAvailable, isPast, pause } from './lib/format'
+import { useClinic } from './hooks/useClinic'
+import { useMock } from './api/client'
+import { RequestError } from './components/RequestError'
+import { formatDate } from './lib/format'
 import { Icon } from './components/Icon'
 import { SlotGrid } from './components/SlotGrid'
 import { Skeleton } from './components/Skeleton'
@@ -12,69 +12,11 @@ import { BookingList } from './components/BookingList'
 import { Toast } from './components/Toast'
 
 export default function App() {
-  const [tab, setTab] = useState<'book' | 'bookings'>('book')
-  const [slots, setSlots] = useState(initialSlots)
-  const [bookings, setBookings] = useState(initialBookings)
-  const [provider, setProvider] = useState('all')
-  const [selected, setSelected] = useState<Slot | null>(null)
-  const [confirmed, setConfirmed] = useState<Booking | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
-  const [toast, setToast] = useState<ToastMessage | null>(null)
-  const [patientEmail, setPatientEmail] = useState('')
-  const submitLock = useRef(false)
-  const toastSequence = useRef(0)
-  const [, refreshClock] = useState(0)
-  useEffect(() => {
-    const timer = window.setTimeout(() => setLoading(false), 650)
-    const clock = window.setInterval(() => refreshClock((value) => value + 1), 30000)
-    return () => { window.clearTimeout(timer); window.clearInterval(clock) }
-  }, [])
-  const notify = (message: string, tone: ToastMessage['tone'] = 'success') => setToast({ id: ++toastSequence.current, message, tone })
-  const dismissToast = useCallback((id: number) => setToast((value) => value?.id === id ? null : value), [])
-  const filtered = slots.filter((slot) => provider === 'all' || slot.providerId === provider)
-  const availableCount = filtered.filter(isAvailable).length
-  function closePanel() { if (!submitLock.current) { setSelected(null); setConfirmed(null) } }
-  function switchTab(value: typeof tab) {
-    if (submitLock.current) return
-    closePanel(); setTab(value)
-  }
-  function pickSlot(slot: Slot) {
-    if (submitLock.current || !isAvailable(slot)) return
-    setConfirmed(null); setSelected(slot)
-  }
-  async function book(patient: Patient) {
-    if (!selected || submitLock.current) return
-    submitLock.current = true; setSubmitting(true)
-    try {
-      await pause(950)
-      const current = slots.find((slot) => slot.id === selected.id)
-      if (!current || !isAvailable(current)) {
-        notify('This time is no longer available. Please choose another slot.', 'error')
-        setSelected(null); setConfirmed(null); return
-      }
-      const booking: Booking = { ...patient, id: crypto.randomUUID(), reference: `WN-${crypto.randomUUID().replaceAll('-', '').slice(0, 8).toUpperCase()}`,
-        slotId: selected.id, createdAt: new Date().toISOString(), status: 'confirmed' }
-      setBookings((value) => [...value, booking])
-      setSlots((value) => value.map((slot) => slot.id === selected.id ? { ...slot, status: 'booked' } : slot))
-      setConfirmed(booking); setPatientEmail(patient.email)
-      notify('Your appointment is confirmed. We’ll see you soon!')
-    } catch { notify('We couldn’t complete your booking. Please try again.', 'error') }
-    finally { submitLock.current = false; setSubmitting(false) }
-  }
-  async function cancel(booking: Booking) {
-    await pause(700)
-    const slot = slots.find((item) => item.id === booking.slotId)
-    if (!slot || isPast(slot)) { notify('This appointment has already started and cannot be cancelled.', 'error'); return }
-    setBookings((value) => value.map((item) => item.id === booking.id ? { ...item, status: 'cancelled' } : item))
-    setSlots((value) => value.map((item) => item.id === booking.slotId ? { ...item, status: 'available' } : item))
-    notify('Appointment cancelled. You can book a new time whenever you’re ready.')
-  }
-  async function copyReference() {
-    if (!confirmed) return
-    try { await navigator.clipboard.writeText(confirmed.reference); notify('Booking reference copied.') }
-    catch { notify('Copy failed. You can select and copy the reference shown above.', 'error') }
-  }
+  const {
+    tab, provider, setProvider, providers, selected, confirmed, loading, slotError,
+    submitting, toast, patientEmail, dismissToast, notify, refreshSlots,
+    filtered, slots, availableCount, closePanel, switchTab, pickSlot, book, copyReference, slotErrorMessage,
+  } = useClinic()
   return <div className="app-shell flex min-h-svh max-md:block">
     <a className="skip-link fixed -top-20 left-5 z-200 rounded-lg bg-accent px-[18px] py-3 text-white focus:top-[15px]" href="#main-content">Skip to content</a>
     <aside className="sidebar fixed inset-y-0 left-0 z-10 flex w-[232px] shrink-0 flex-col border-r border-line bg-white px-5 pt-9 pb-6 max-wide:w-[215px] max-wide:px-[13px] md:max-rail:w-21 md:max-rail:px-2.5 md:max-rail:py-7 max-md:static max-md:w-auto max-md:border-r-0 max-md:border-b max-md:px-5 max-md:pt-[21px] max-md:pb-0">
@@ -106,21 +48,21 @@ export default function App() {
               <span className="step-number grid size-7 shrink-0 place-items-center rounded-full border border-[#dce3d5] bg-[#f1f4eb] text-[10px] font-semibold max-md:size-[25px] max-md:text-[9px]">{index < current ? <Icon name="check" size={15} /> : `0${index + 1}`}</span><span>{label}</span>{index < 2 && <span className="step-line mr-5 ml-[7px] h-px min-w-4 flex-1 bg-[#dfe5da] max-md:mx-1.5 max-md:min-w-1" />}</li>
           })}</ol>
           <div className="booking-layout grid grid-cols-[minmax(0,1fr)_336px] items-start gap-6 roomy:grid-cols-[minmax(0,1fr)_360px] max-wide:grid-cols-[minmax(0,1fr)_310px] max-wide:gap-5 md:max-rail:grid-cols-[minmax(0,1fr)_280px] md:max-rail:gap-4 max-md:block"><section className="availability overflow-hidden px-6 pt-[26px] max-wide:px-5 max-wide:pt-6 md:max-rail:px-4 max-md:px-[17px] max-md:pt-[23px] panel rounded-2xl border border-line bg-white shadow-card" aria-labelledby="availability-title" aria-busy={loading}>
-            <div className="section-title flex items-center justify-between gap-3 [&_h2]:text-[22px] [&_h2]:leading-[1.4] [&_h2]:font-[550] [&_h2]:tracking-[-.7px] [&_p]:mt-[7px] [&_p]:text-sm [&_p]:leading-[1.7] [&_p]:text-muted max-md:[&_h2]:text-[21px] max-md:[&_p]:text-[13px]"><div><h2 id="availability-title">Make time for you.</h2><p>Pick a 30-minute visit that fits your day.</p></div><span className="availability-badge flex items-center gap-1.5 rounded-md bg-[#f0f5eb] px-[9px] py-[7px] text-[10px] whitespace-nowrap text-[#4f6a44] max-wide:px-[7px] max-wide:text-[9px] max-rail:hidden"><span className="status-dot inline-block size-1.5 shrink-0 rounded-full bg-[#668861]" />{availableCount} available</span></div>
+            <div className="section-title flex items-center justify-between gap-3 [&_h2]:text-[22px] [&_h2]:leading-[1.4] [&_h2]:font-[550] [&_h2]:tracking-[-.7px] [&_p]:mt-[7px] [&_p]:text-sm [&_p]:leading-[1.7] [&_p]:text-muted max-md:[&_h2]:text-[21px] max-md:[&_p]:text-[13px]"><div><h2 id="availability-title">Make time for you.</h2><p>Pick a visit that fits your day.</p></div><span className="availability-badge flex items-center gap-1.5 rounded-md bg-[#f0f5eb] px-[9px] py-[7px] text-[10px] whitespace-nowrap text-[#4f6a44] max-wide:px-[7px] max-wide:text-[9px] max-rail:hidden"><span className="status-dot inline-block size-1.5 shrink-0 rounded-full bg-[#668861]" />{availableCount} available</span></div>
             <div className="provider-filter my-[25px] border-b border-line pb-6 max-md:my-[23px] max-md:pb-5"><span className="filter-label mb-[11px] block text-[11px] font-[550] text-[#57694b] max-md:text-xs">Your provider</span><div className="provider-buttons flex flex-wrap gap-[7px] [&_button]:flex [&_button]:min-h-[37px] [&_button]:items-center [&_button]:justify-center [&_button]:gap-1.5 [&_button]:rounded-[7px] [&_button]:border [&_button]:border-[#dce4d5] [&_button]:bg-white [&_button]:px-2.5 [&_button]:py-[7px] [&_button]:text-[11px] [&_button]:font-medium [&_button]:text-[#5a6d4d] [&_button.selected]:border-[#becfb4] [&_button.selected]:bg-[#edf3e9] [&_button.selected]:text-[#365d39] [&_button:hover]:border-[#8da080] [&_button:hover]:bg-[#f3f7f0] max-wide:[&_button]:text-[10px] max-md:[&_button]:min-h-10 max-md:[&_button]:px-2 max-md:[&_button]:py-1.5 max-md:[&_button:first-child]:w-full max-md:[&_button:not(:first-child)]:flex-1" role="group" aria-label="Filter by provider">
-              <button type="button" className={provider === 'all' ? 'selected' : ''} aria-pressed={provider === 'all'} onClick={() => setProvider('all')} disabled={submitting}>All providers</button>
+              <button type="button" className={provider === null ? 'selected' : ''} aria-pressed={provider === null} onClick={() => setProvider(null)} disabled={submitting}>All providers</button>
               {providers.map((person) => <button key={person.id} type="button" className={provider === person.id ? 'selected' : ''} aria-pressed={provider === person.id}
-                onClick={() => setProvider(person.id)} disabled={submitting}><span className={`avatar grid size-9 shrink-0 place-items-center rounded-full bg-[#e5eddc] text-xs font-semibold text-[#536945] [&.daniel]:bg-[#e9eae2] [&.daniel]:text-[#636952] avatar-small [&]:size-[22px] [&]:text-[8px] max-md:[&]:size-5 max-md:[&]:text-[7px] ${person.id}`}>{person.initials}</span>{person.name}</button>)}
+                onClick={() => setProvider(person.id)} disabled={submitting}><span className={`avatar grid size-9 shrink-0 place-items-center rounded-full bg-[#e5eddc] text-xs font-semibold text-[#536945] [&.daniel]:bg-[#e9eae2] [&.daniel]:text-[#636952] avatar-small [&]:size-[22px] [&]:text-[8px] max-md:[&]:size-5 max-md:[&]:text-[7px]`}>{person.initials}</span>{person.name}</button>)}
             </div></div>
-            {loading ? <Skeleton /> : <SlotGrid slots={filtered} selected={selected?.id} onSelect={pickSlot} />}
+            {loading ? <Skeleton /> : slotError ? <RequestError message={slotErrorMessage} onRetry={() => void refreshSlots()} /> : <SlotGrid slots={filtered} selected={selected?.id} onSelect={pickSlot} />}
             <div className="availability-footer -mx-6 flex items-center gap-2 border-t border-line bg-[#fafbf8] px-6 py-[15px] text-[10px] leading-[1.7] text-[#647458] max-wide:-mx-5 max-wide:px-5 md:max-rail:-mx-4 md:max-rail:px-4 max-md:-mx-[17px] max-md:items-start max-md:gap-[7px] max-md:px-[17px] max-md:py-3.5"><Icon name="info" size={16} /><span>A little flexibility goes a long way. You can cancel from My bookings.</span></div>
           </section>
           <BookingPanel active={!!selected} busy={submitting} focusKey={confirmed?.id ?? selected?.id ?? ''} onClose={closePanel}>
             {selected && (confirmed ? <ConfirmationCard booking={confirmed} slot={selected} onAnother={closePanel} onCopy={copyReference} onBookings={() => switchTab('bookings')} />
               : <BookingForm key={selected.id} slot={selected} submitting={submitting} onSubmit={book} onClose={closePanel} />)}
           </BookingPanel></div>
-        </> : <BookingList bookings={bookings} slots={slots} initialEmail={patientEmail} onCancel={cancel} />}
-        <footer className="page-footer mt-7 flex justify-between gap-3 px-px text-[10px] leading-[1.7] text-[#66775b] [&>span:first-child]:flex [&>span:first-child]:items-center [&>span:first-child]:gap-1.5 md:max-rail:text-[9px] max-md:mt-[26px] max-md:flex-col max-md:items-center max-md:gap-[9px] max-md:text-center"><span><Icon name="shield" size={15} />A little care makes all the difference.</span><span>Mock data only <span className="footer-dot mx-[5px]">·</span> No emails are sent</span></footer>
+        </> : <BookingList slots={slots} initialEmail={patientEmail} notify={notify} onChanged={refreshSlots} />}
+        <footer className="page-footer mt-7 flex justify-between gap-3 px-px text-[10px] leading-[1.7] text-[#66775b] [&>span:first-child]:flex [&>span:first-child]:items-center [&>span:first-child]:gap-1.5 md:max-rail:text-[9px] max-md:mt-[26px] max-md:flex-col max-md:items-center max-md:gap-[9px] max-md:text-center"><span><Icon name="shield" size={15} />A little care makes all the difference.</span><span>{useMock ? 'Mock data only' : 'Connected to the clinic'} <span className="footer-dot mx-[5px]">·</span> {useMock ? 'No emails are sent' : 'Appointments managed in real time'}</span></footer>
       </main>
     </div>
     <Toast toast={toast} onDismiss={dismissToast} />

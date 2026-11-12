@@ -1,15 +1,15 @@
 import type { Booking, Slot } from '../types'
-import { providers } from '../mock/data'
+import { providerFor } from '../lib/provider'
 import { longDate, time } from '../lib/format'
 import { Icon } from './Icon'
 export function ConfirmationCard({ booking, slot, onAnother, onCopy, onBookings }: {
   booking: Booking; slot: Slot; onAnother: () => void; onCopy: () => void; onBookings: () => void
 }) {
-  const provider = providers.find((person) => person.id === slot.providerId)!
+  const provider = providerFor(slot)
   return <div className="confirmation text-center [&_.eyebrow]:text-[9px] [&_.eyebrow]:tracking-[1.2px] [&_h2]:mt-[11px] [&_h2]:mb-2.5 [&_h2]:text-[26px] [&_h2]:font-[550] [&_h2]:tracking-[-.9px] [&>p]:text-xs [&>p]:leading-[1.8] [&>p]:text-[#5c754e] [&>.secondary-button]:mt-2.5 max-md:pt-[13px] max-md:[&_h2]:text-[28px] max-md:[&>p]:text-sm"><span className="success-icon mt-[3px] mb-[21px] inline-grid size-[67px] place-items-center rounded-full border-8 border-[#f2f6ed] bg-[#deecd9] text-[#4d7540]"><Icon name="check" size={32} /></span>
     <span className="eyebrow block text-[10px] font-[650] tracking-[1.6px] text-[#607955]">A LITTLE CARE, ALL BOOKED</span><h2 id="panel-title" tabIndex={-1}>You’re on the calendar.</h2>
     <p>We look forward to seeing you, {booking.name.split(' ')[0]}.</p>
-    <div className="reference-box my-6 rounded-[10px] border border-dashed border-[#c5d6b9] bg-[#f4f7ee] px-3 py-[18px] [&>span]:block [&>span]:text-[10px] [&>span]:text-[#627c52] [&_strong]:my-2 [&_strong]:block [&_strong]:text-xl [&_strong]:font-[550] [&_strong]:tracking-[1.8px] [&_strong]:select-all [&_.text-button]:text-[11px]"><span>Booking reference</span><strong>{booking.reference}</strong>
+    <div className="reference-box my-6 rounded-[10px] border border-dashed border-[#c5d6b9] bg-[#f4f7ee] px-3 py-[18px] [&>span]:block [&>span]:text-[10px] [&>span]:text-[#627c52] [&_strong]:my-2 [&_strong]:block [&_strong]:text-xl [&_strong]:font-[550] [&_strong]:tracking-[1.8px] [&_strong]:select-all [&_strong]:wrap-anywhere [&_.text-button]:text-[11px]"><span>Booking reference</span><strong>{booking.reference}</strong>
       <button type="button" className="text-button inline-flex items-center gap-[5px] border-0 bg-transparent p-[5px] text-[inherit] text-accent underline underline-offset-[3px] hover:text-[#153f35]" onClick={onCopy}><Icon name="copy" size={15} />Copy reference</button></div>
     <dl className="confirmation-details mb-5 text-left [&>div]:mb-[13px] [&>div]:grid [&>div]:grid-cols-[60px_minmax(0,1fr)] [&>div]:gap-3 [&>div]:text-xs [&>div]:leading-[1.7] [&_dt]:text-[#667c57] [&_dd]:m-0 [&_dd]:wrap-anywhere [&_dd]:text-[#405938] max-md:[&>div]:grid-cols-[65px_minmax(0,1fr)] max-md:[&>div]:text-[13px]"><div><dt>Provider</dt><dd>{provider.name}</dd></div>
       <div><dt>Date</dt><dd>{longDate(slot.startsAt)}</dd></div><div><dt>Time</dt><dd>{time(slot.startsAt)} WAT · {slot.duration} min</dd></div>
