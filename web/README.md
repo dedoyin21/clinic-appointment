@@ -21,7 +21,6 @@ The 12 mock slots cover three Lagos calendar dates and two providers. Past and b
 ```text
 src/
   App.tsx
-  App.css
   index.css
   main.tsx
   types.ts
@@ -43,3 +42,5 @@ src/
 ```
 
 The desktop booking panel becomes a native modal bottom sheet below 768px. Native dialogs handle focus trapping and Escape; focus returns to the initiating control. Inputs have inline validation, lists have loading skeletons, and submissions prevent duplicate bookings. Notifications use an ARIA live region and the browser top layer so they remain visible above mobile sheets. Motion respects `prefers-reduced-motion`.
+
+Styling uses Tailwind CSS v4 utilities directly in React components, with CSS-first theme tokens and animations in src/index.css. The Vite integration uses @tailwindcss/vite; no JavaScript Tailwind configuration is needed. Semantic classes alongside utilities serve as focus-management and browser-check hooks.
