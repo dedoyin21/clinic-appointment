@@ -1,75 +1,45 @@
-# React + TypeScript + Vite
+# Wellnest Clinic
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A mock clinic appointment app built with React, TypeScript, Vite, and Tailwind CSS v4. No UI libraries or additional runtime dependencies.
 
-Currently, two official plugins are available:
+## Run
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+From `web`, run `npm install` if dependencies are missing, then `npm run dev`.
+Run `npm run build` for the TypeScript check and production build.
 
-## React Compiler
+## Try the flow
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Choose a provider and an available appointment, then enter a name and email.
+- Copy the generated reference, book another visit, or view your bookings.
+- In My bookings, use `alex@example.com` to see five sample appointments and try Load more.
+- Cancel a future appointment through the confirmation dialog. The slot becomes available again.
 
-## Expanding the ESLint configuration
+The 12 mock slots cover three Lagos calendar dates and two providers. Past and booked appointments remain visible. All times use Africa/Lagos (WAT). Data is kept in React state and resets on refresh; no emails or network booking requests are sent. Inter loads through Google Fonts with a system font fallback.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Source structure
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```text
+src/
+  App.tsx
+  App.css
+  index.css
+  main.tsx
+  types.ts
+  lib/format.ts
+  mock/data.ts
+  hooks/useBookingPanel.ts
+  components/
+    Icon.tsx
+    SlotCard.tsx
+    SlotGrid.tsx
+    BookingPanel.tsx
+    BookingForm.tsx
+    ConfirmationCard.tsx
+    BookingList.tsx
+    CancelDialog.tsx
+    Toast.tsx
+    Skeleton.tsx
+    EmptyState.tsx
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
+The desktop booking panel becomes a native modal bottom sheet below 768px. Native dialogs handle focus trapping and Escape; focus returns to the initiating control. Inputs have inline validation, lists have loading skeletons, and submissions prevent duplicate bookings. Notifications use an ARIA live region and the browser top layer so they remain visible above mobile sheets. Motion respects `prefers-reduced-motion`.
