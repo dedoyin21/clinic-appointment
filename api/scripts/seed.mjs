@@ -14,7 +14,11 @@ const providers = [
 ];
 
 // Times are UTC (Lagos is UTC+1, so 09:00Z shows as 10:00 in Lagos).
-const times = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "14:00", "14:30", "15:00", "15:30"];
+// The clinic runs Tue/Thu from 10:00 AM–4:00 PM WAT.
+const times = [
+  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+  "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
+];
 
 const START = new Date("2026-11-16T00:00:00Z");
 const END = new Date("2026-12-31T00:00:00Z"); // last day included

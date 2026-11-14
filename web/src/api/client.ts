@@ -25,13 +25,21 @@ export class ApiError extends Error {
 }
 
 export function errorMessage(error: unknown): string {
-  if (!(error instanceof ApiError)) return 'Something went wrong. Please try again.'
+  if (!(error instanceof ApiError)) return 'We could not complete that request. Please check your connection and try again.'
   switch (error.status) {
     case 0: return error.message
-    case 401: return 'We couldn’t connect to the clinic. Please check the API key configuration.'
-    case 404: return 'This appointment could not be found. Please refresh and try again.'
-    case 429: return 'Too many booking attempts. Please wait before trying again.'
-    default: return error.status >= 500 ? 'The clinic service is temporarily unavailable. Please retry.' : error.message
+    case 400:
+      if (error.message.includes('already started')) return 'This appointment has already started. Please choose a later time.'
+      if (error.message.includes('email')) return 'Please enter a valid email address so we can find your booking.'
+      return 'Some appointment details need attention. Please review them and try again.'
+    case 401: return 'The clinic connection needs attention. Please try again later.'
+    case 404: return 'We could not find that appointment. It may have been removed or is no longer available.'
+    case 409: return 'That appointment was just booked by someone else. Please choose another time.'
+    case 422: return 'This booking request was already used with different details. Please start a new booking.'
+    case 429: return `You have reached the booking limit. Please wait ${error.retryAfter} second${error.retryAfter === 1 ? '' : 's'} before trying again.`
+    default: return error.status >= 500
+      ? 'The clinic service is having trouble right now. Please try again in a moment.'
+      : 'We could not complete that request. Please review your details and try again.'
   }
 }
 
